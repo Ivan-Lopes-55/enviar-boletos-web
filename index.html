@@ -1,23 +1,97 @@
-<!DOCTYPE html><html><body>
+<!DOCTYPE html>
+<html lang='pt-BR'>
+<head>
+  <meta charset='UTF-8'>
+  <title>Envio de Boletos</title>
+  <style>
+      body { font-family: Arial; margin: 30px; background:#f5f5f5; }
+      h2 { font-size:28px; }
+      #container { background:white; padding:25px; border-radius:10px; max-width:700px; margin:auto; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+
+      #dropzone {
+          width:100%; padding:40px;
+          border:3px dashed #888;
+          text-align:center; margin:20px 0;
+          cursor:pointer; background:#fafafa;
+          border-radius:8px; transition:0.2s;
+      }
+      #dropzone:hover { background:#f0f0f0; }
+
+      #log { margin-top:20px; padding:15px; border-radius:8px;
+             background:#fff8f8; border:1px solid #e0b4b4;
+             font-size:14px; white-space:pre-wrap; }
+
+      .success { color:green; font-weight:bold; }
+      .error { color:#b30000; font-weight:bold; }
+
+      footer { margin-top:40px; text-align:center; color:#666; font-size:14px; }
+  </style>
+</head>
+<body>
+<div id='container'>
 <h2>Envio de Boletos</h2>
-<form id="form">
-<input type="file" id="planilha"><br><br>
-<input type="file" id="pdfs" multiple><br><br>
-<input type="email" id="smtp_user" placeholder="Email SMTP"><br><br>
-<input type="password" id="smtp_pass" placeholder="Senha SMTP"><br><br>
-<button>Enviar</button>
+
+<form id='form'>
+    <label><b>Planilha XLSX:</b></label>
+    <input type='file' id='planilha' required><br><br>
+
+    <div id='dropzone'>Arraste os PDFs aqui</div>
+
+    <label><b>Email SMTP:</b></label>
+    <input type='email' id='smtp_user' required style='width:100%; padding:8px;'><br><br>
+
+    <label><b>Senha SMTP:</b></label>
+    <input type='password' id='smtp_pass' required style='width:100%; padding:8px;'><br><br>
+
+    <button style='padding:10px 20px;'>Enviar</button>
 </form>
-<pre id="log"></pre>
+
+<pre id='log'></pre>
+
+<footer>Criado por <b>Ivan Lopes</b></footer>
+</div>
+
 <script>
-document.getElementById('form').onsubmit = async e => {
- e.preventDefault();
- let fd = new FormData();
- fd.append('planilha', document.getElementById('planilha').files[0]);
- for (let f of document.getElementById('pdfs').files) fd.append('pdfs', f);
- fd.append('smtp_user', document.getElementById('smtp_user').value);
- fd.append('smtp_pass', document.getElementById('smtp_pass').value);
- let r = await fetch('/enviar-boletos', {method:'POST', body:fd});
- document.getElementById('log').textContent = await r.text();
-};
+let pdfs = [];
+
+// Drag & drop
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover', e => e.preventDefault());
+dz.addEventListener('drop', e => {
+    e.preventDefault();
+    for (let file of e.dataTransfer.files)
+        if (file.type === 'application/pdf') pdfs.push(file);
+    dz.innerText = pdfs.length + ' PDF(s) adicionados';
+});
+
+// Submit
+const form = document.getElementById('form');
+form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const log = document.getElementById('log');
+    log.innerHTML = '⏳ Enviando boletos... aguarde.';
+
+    let fd = new FormData();
+    fd.append('planilha', document.getElementById('planilha').files[0]);
+    pdfs.forEach(p => fd.append('pdfs', p));
+    fd.append('smtp_user', document.getElementById('smtp_user').value);
+    fd.append('smtp_pass', document.getElementById('smtp_pass').value);
+
+    let r = await fetch('/enviar-boletos', { method:'POST', body:fd });
+    let out = await r.json();
+
+    log.innerHTML = '';
+
+    if(out.enviados.length > 0) {
+        log.innerHTML += "<span class='success'>✔ E-mails enviados:</span><br>";
+        out.enviados.forEach(a => log.innerHTML += '• ' + a + '<br>');
+        log.innerHTML += '<br>';
+    }
+
+    if(out.nao_encontrados.length > 0) {
+        log.innerHTML += "<span class='error'>✖ Não encontrados na planilha:</span><br>";
+        out.nao_encontrados.forEach(a => log.innerHTML += '• ' + a + '<br>');
+    }
+});
 </script>
 </body></html>

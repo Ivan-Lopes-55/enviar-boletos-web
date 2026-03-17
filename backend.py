@@ -14,8 +14,7 @@ app = FastAPI()
 def serve_frontend():
     return FileResponse("index.html")
 
-# Normalize
-
+# Normalize text for matching
 def normalize(s: str) -> str:
     s = s.lower()
     s = re.sub(r"[^a-z0-9 ]", " ", s)
