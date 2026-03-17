@@ -1,138 +1,23 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Envio de Boletos</title>
-
-  <style>
-      body {
-          font-family: Arial, sans-serif;
-          margin: 30px;
-      }
-      #dropzone {
-          width: 100%;
-          padding: 40px;
-          border: 3px dashed #888;
-          text-align: center;
-          margin: 20px 0;
-          cursor: pointer;
-          background: #fafafa;
-      }
-      #dropzone:hover {
-          background: #f0f0f0;
-      }
-      #log {
-          margin-top: 20px;
-          padding: 15px;
-          border-radius: 5px;
-          background: #f7f7f7;
-          border: 1px solid #ddd;
-          white-space: pre-wrap;
-      }
-      .erro {
-          color: red;
-          font-weight: bold;
-      }
-      .sucesso {
-          color: green;
-          font-weight: bold;
-      }
-      footer {
-          margin-top: 40px;
-          text-align: center;
-          color: #666;
-          font-size: 14px;
-      }
-  </style>
-</head>
-
-<body>
-
+<!DOCTYPE html><html><body>
 <h2>Envio de Boletos</h2>
-
 <form id="form">
-
-    <label><b>Planilha XLSX:</b></label><br>
-    <input type="file" id="planilha" required><br><br>
-
-    <div id="dropzone">Arraste os PDFs aqui</div>
-
-    <label><b>Email SMTP (quem envia):</b></label><br>
-    <input type="email" id="smtp_user" required><br><br>
-
-    <label><b>Senha SMTP:</b></label><br>
-    <input type="password" id="smtp_pass" required><br><br>
-
-    <button type="submit">Enviar</button>
-
+<input type="file" id="planilha"><br><br>
+<input type="file" id="pdfs" multiple><br><br>
+<input type="email" id="smtp_user" placeholder="Email SMTP"><br><br>
+<input type="password" id="smtp_pass" placeholder="Senha SMTP"><br><br>
+<button>Enviar</button>
 </form>
-
 <pre id="log"></pre>
-
-<footer>
-    Criado por <b>Ivan Lopes</b>
-</footer>
-
 <script>
-let pdfs = [];
-
-// === Arrastar PDFs ===
-document.getElementById("dropzone").addEventListener("drop", e => {
-    e.preventDefault();
-    for (let file of e.dataTransfer.files) {
-        if (file.type === "application/pdf") {
-            pdfs.push(file);
-        }
-    }
-    document.getElementById("dropzone").innerText =
-        pdfs.length + " PDF(s) adicionados";
-});
-
-document.getElementById("dropzone").addEventListener("dragover", e => e.preventDefault());
-
-
-// === Enviar formulário ===
-document.getElementById("form").addEventListener("submit", async e => {
-    e.preventDefault();
-
-    const log = document.getElementById("log");
-    log.innerHTML = "⏳ Enviando... aguarde.";
-
-    if (pdfs.length === 0) {
-        log.innerHTML = "❌ Nenhum PDF foi adicionado.";
-        return;
-    }
-
-    const form = new FormData();
-    form.append("planilha", document.getElementById("planilha").files[0]);
-    pdfs.forEach(p => form.append("pdfs", p));
-
-    form.append("smtp_user", document.getElementById("smtp_user").value);
-    form.append("smtp_pass", document.getElementById("smtp_pass").value);
-
-    const resp = await fetch("/enviar-boletos", {
-        method: "POST",
-        body: form
-    });
-
-    const out = await resp.json();
-
-    log.innerHTML = "";
-
-    // Sucessos
-    if (out.enviados.length > 0) {
-        log.innerHTML += "✅ <span class='sucesso'>Enviados:</span><br>";
-        out.enviados.forEach(a => log.innerHTML += "• " + a + "<br>");
-        log.innerHTML += "<br>";
-    }
-
-    // Erros / não encontrados
-    if (out.nao_encontrados.length > 0) {
-        log.innerHTML += "❌ <span class='erro'>Não encontrados na planilha:</span><br>";
-        out.nao_encontrados.forEach(a => log.innerHTML += "• " + a + "<br>");
-    }
-});
+document.getElementById('form').onsubmit = async e => {
+ e.preventDefault();
+ let fd = new FormData();
+ fd.append('planilha', document.getElementById('planilha').files[0]);
+ for (let f of document.getElementById('pdfs').files) fd.append('pdfs', f);
+ fd.append('smtp_user', document.getElementById('smtp_user').value);
+ fd.append('smtp_pass', document.getElementById('smtp_pass').value);
+ let r = await fetch('/enviar-boletos', {method:'POST', body:fd});
+ document.getElementById('log').textContent = await r.text();
+};
 </script>
-
-</body>
-</html>
+</body></html>
