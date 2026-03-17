@@ -1,6 +1,5 @@
-
 from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
 import smtplib
 import pandas as pd
@@ -10,6 +9,12 @@ from email.message import EmailMessage
 
 app = FastAPI()
 
+# === ROTA PRINCIPAL: SERVE O INDEX.HTML ===
+@app.get("/")
+def serve_frontend():
+    return FileResponse("index.html")
+
+# === CARREGA PLANILHA ===
 def load_email_mapping(xlsx_path):
     df = pd.read_excel(xlsx_path, engine='openpyxl', dtype=str)
     df = df.fillna('')
@@ -21,6 +26,7 @@ def load_email_mapping(xlsx_path):
             mapping[nome.lower()] = contato
     return mapping
 
+# === ENVIO SMTP ===
 def send_email_smtp(to, subject, html, attachments, smtp_user, smtp_pass):
     msg = EmailMessage()
     msg['From'] = smtp_user
@@ -37,8 +43,14 @@ def send_email_smtp(to, subject, html, attachments, smtp_user, smtp_pass):
         smtp.login(smtp_user, smtp_pass)
         smtp.send_message(msg)
 
+# === ROTA DE ENVIO DE BOLETOS ===
 @app.post('/enviar-boletos')
-async def enviar_boletos(planilha: UploadFile = File(...), pdfs: list[UploadFile] = File(...), smtp_user: str = Form(...), smtp_pass: str = Form(...)):
+async def enviar_boletos(
+    planilha: UploadFile = File(...),
+    pdfs: list[UploadFile] = File(...),
+    smtp_user: str = Form(...),
+    smtp_pass: str = Form(...)
+):
 
     tempdir = Path(tempfile.mkdtemp())
 
